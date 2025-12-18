@@ -1,7 +1,7 @@
 import AdvocatesTable from "./components/AdvocatesTable";
 import { advocateData } from "../db/seed/advocates";
 
-interface Advocate {
+export interface Advocate {
   id?: number;
   firstName: string;
   lastName: string;
@@ -16,9 +16,6 @@ interface Advocate {
 export const revalidate = 3600;
 
 async function getAdvocates(): Promise<Advocate[]> {
-  // In production, you might fetch from an API or database
-  // For now, we'll use the seed data directly
-  // If you want to use the API route, uncomment below:
   
   // const response = await fetch('http://localhost:3000/api/advocates', {
   //   next: { revalidate: 3600 }
