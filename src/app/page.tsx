@@ -1,102 +1,40 @@
-"use client";
-
-import { useEffect, useState } from "react";
+import AdvocatesTable from "./components/AdvocatesTable";
+import { advocateData } from "../db/seed/advocates";
 
 interface Advocate {
-  id: number;
+  id?: number;
   firstName: string;
   lastName: string;
   city: string;
   degree: string;
   specialties: string[];
-  yearsOfExperience: string;
-  phoneNumber: string;
+  yearsOfExperience: string | number;
+  phoneNumber: string | number;
 }
 
-export default function Home() {
-  const [advocates, setAdvocates] = useState<Advocate[]>([]);
-  const [filteredAdvocates, setFilteredAdvocates] = useState<Advocate[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
+// Revalidate every 3600 seconds (1 hour) - ISR configuration
+export const revalidate = 3600;
 
-  useEffect(() => {
-    fetch("/api/advocates").then((response) => {
-      response.json().then((jsonResponse) => {
-        setAdvocates(jsonResponse.data);
-        setFilteredAdvocates(jsonResponse.data);
-      });
-    });
-  }, []);
+async function getAdvocates(): Promise<Advocate[]> {
+  
+  // const response = await fetch('http://localhost:3000/api/advocates', {
+  //   next: { revalidate: 3600 }
+  // });
+  // const data = await response.json();
+  // return data.data;
+  
+  return advocateData as Advocate[];
+}
 
-  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const searchValue = e.target.value;
-    setSearchTerm(searchValue);
-
-    const filtered = advocates.filter((advocate) => {
-      return (
-        advocate.firstName.includes(searchValue) ||
-        advocate.lastName.includes(searchValue) ||
-        advocate.city.includes(searchValue) ||
-        advocate.degree.includes(searchValue) ||
-        advocate.specialties.some((specialty) => specialty.includes(searchValue)) ||
-        advocate.yearsOfExperience.includes(searchValue)
-      );
-    });
-
-    setFilteredAdvocates(filtered);
-  };
-
-  const onClick = () => {
-    setSearchTerm("");
-    setFilteredAdvocates(advocates);
-  };
+export default async function Home() {
+  const advocates = await getAdvocates();
 
   return (
     <main style={{ margin: "24px" }}>
       <h1>Solace Advocates</h1>
       <br />
       <br />
-      <div>
-        <p>Search</p>
-        <p>
-          Searching for: <span>{searchTerm}</span>
-        </p>
-        <input style={{ border: "1px solid black" }} onChange={onChange} value={searchTerm} />
-        <button onClick={onClick}>Reset Search</button>
-      </div>
-      <br />
-      <br />
-      <table>
-        <thead>
-          <tr>
-            <th>First Name</th>
-            <th>Last Name</th>
-            <th>City</th>
-            <th>Degree</th>
-            <th>Specialties</th>
-            <th>Years of Experience</th>
-            <th>Phone Number</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filteredAdvocates.map((advocate, index) => {
-            return (
-              <tr key={index}>
-                <td>{advocate.firstName}</td>
-                <td>{advocate.lastName}</td>
-                <td>{advocate.city}</td>
-                <td>{advocate.degree}</td>
-                <td>
-                  {advocate.specialties.map((s, specIndex) => (
-                    <div key={`${index}-${specIndex}`}>{s}</div>
-                  ))}
-                </td>
-                <td>{advocate.yearsOfExperience}</td>
-                <td>{advocate.phoneNumber}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      <AdvocatesTable advocates={advocates} />
     </main>
   );
 }
