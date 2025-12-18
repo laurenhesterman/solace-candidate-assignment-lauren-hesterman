@@ -1,64 +1,73 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { Tooltip } from "antd";
 import TableHeader from "./TableHeader";
-
-interface Advocate {
-  id?: number;
-  firstName: string;
-  lastName: string;
-  city: string;
-  degree: string;
-  specialties: string[];
-  yearsOfExperience: string | number;
-  phoneNumber: string | number;
-}
+import { Advocate } from "../page";
 
 interface AdvocatesTableProps {
   advocates: Advocate[];
 }
 
 export default function AdvocatesTable({ advocates }: AdvocatesTableProps) {
-  const [filteredAdvocates, setFilteredAdvocates] = useState<Advocate[]>(advocates);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+
+  //Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const filterAdvocate = useCallback((advocate: Advocate, searchValue: string) => {
+    if (!searchValue) return true;
+    
+    const lowerSearch = searchValue.toLowerCase();
+    const yearsExp = String(advocate.yearsOfExperience);
+    
+    return (
+      advocate.firstName.toLowerCase().includes(lowerSearch) ||
+      advocate.lastName.toLowerCase().includes(lowerSearch) ||
+      advocate.city.toLowerCase().includes(lowerSearch) ||
+      advocate.degree.toLowerCase().includes(lowerSearch) ||
+      advocate.specialties.some((specialty) =>
+        specialty.toLowerCase().includes(lowerSearch)
+      ) ||
+      yearsExp.includes(searchValue)
+    );
+  }, []);
+
+  // Memoized filtered list
+  const filteredAdvocates = useMemo(() => {
+    if (!debouncedSearchTerm) return advocates;
+    return advocates.filter((advocate) => filterAdvocate(advocate, debouncedSearchTerm));
+  }, [advocates, debouncedSearchTerm, filterAdvocate]);
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const searchValue = e.target.value;
-    setSearchTerm(searchValue);
-
-    const filtered = advocates.filter((advocate) => {
-      const yearsExp = String(advocate.yearsOfExperience);
-      return (
-        advocate.firstName.toLowerCase().includes(searchValue.toLowerCase()) ||
-        advocate.lastName.toLowerCase().includes(searchValue.toLowerCase()) ||
-        advocate.city.toLowerCase().includes(searchValue.toLowerCase()) ||
-        advocate.degree.toLowerCase().includes(searchValue.toLowerCase()) ||
-        advocate.specialties.some((specialty) =>
-          specialty.toLowerCase().includes(searchValue.toLowerCase())
-        ) ||
-        yearsExp.includes(searchValue)
-      );
-    });
-
-    setFilteredAdvocates(filtered);
+    setSearchTerm(e.target.value);
   };
 
   const onClick = () => {
     setSearchTerm("");
-    setFilteredAdvocates(advocates);
+    setDebouncedSearchTerm("");
   };
 
   return (
     <div className="space-y-8">
-      {/* Search Section */}
       <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-200">
         <h2 className="text-lg font-semibold text-primary mb-2">
           Search Advocates
         </h2>
-        
+        {/* Search */}
         {searchTerm && (
           <p className="text-sm text-gray-600 mb-4">
             Searching for: <span className="font-medium text-primary">{searchTerm}</span>
+            {searchTerm !== debouncedSearchTerm && (
+              <span className="text-gray-400 ml-2">(searching...)</span>
+            )}
           </p>
         )}
         
@@ -83,12 +92,12 @@ export default function AdvocatesTable({ advocates }: AdvocatesTableProps) {
         </p>
       </div>
 
-      {/* Table Section */}
+      {/* Table */}
       <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="bg-gradient-to-r from-secondary-100 to-secondary-200 border-b border-gray-200">
+              <tr className="bg-white border-b border-gray-200">
                 <TableHeader>First Name</TableHeader>
                 <TableHeader>Last Name</TableHeader>
                 <TableHeader>City</TableHeader>
@@ -115,7 +124,7 @@ export default function AdvocatesTable({ advocates }: AdvocatesTableProps) {
                 filteredAdvocates.map((advocate, index) => (
                   <tr
                     key={index}
-                    className="hover:bg-secondary-50 transition-colors duration-150"
+                    className="hover:bg-secondary-50 transition-colors duration-150 h-20"
                   >
                     <td className="px-6 py-4 text-sm font-medium text-gray-900">
                       {advocate.firstName}
@@ -131,17 +140,33 @@ export default function AdvocatesTable({ advocates }: AdvocatesTableProps) {
                         {advocate.degree}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm">
-                      <div className="flex flex-wrap gap-1.5 max-w-md">
-                        {advocate.specialties.map((s, specIndex) => (
-                          <span
-                            key={`${index}-${specIndex}`}
-                            className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-secondary-200 text-primary"
-                          >
-                            {s}
-                          </span>
-                        ))}
-                      </div>
+                    <td className="px-6 py-4 text-sm max-w-[400px]">
+                      <Tooltip 
+                        title={
+                          <div className="space-y-1">
+                            {advocate.specialties.map((s, i) => (
+                              <div key={i}>{s}</div>
+                            ))}
+                          </div>
+                        }
+                        placement="top"
+                      >
+                        <div className="flex flex-wrap gap-1.5 max-h-14 overflow-hidden cursor-help">
+                          {advocate.specialties.slice(0, 3).map((s, specIndex) => (
+                            <span
+                              key={`${index}-${specIndex}`}
+                              className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-secondary-200 text-primary"
+                            >
+                              {s}
+                            </span>
+                          ))}
+                          {advocate.specialties.length > 3 && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-gray-200 text-gray-700 font-medium">
+                              +{advocate.specialties.length - 3}
+                            </span>
+                          )}
+                        </div>
+                      </Tooltip>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-700">
                       {advocate.yearsOfExperience} years
